@@ -25,12 +25,9 @@
 class Kimai_Invoice_HtmlToPdfRenderer extends Kimai_Invoice_HtmlRenderer
 {
 
-    /**
-     * Render the invoice.
-     *
-     * @return mixed
-     */
-    public function render()
+    private $use_tcpdf = true; /* If false, then wkhtmltopdf will be used */
+
+    private function output_pdf_from_tcpdf() 
     {
         /* @var $l array */
         require_once('tcpdf/config/lang/eng.php');
@@ -78,7 +75,7 @@ class Kimai_Invoice_HtmlToPdfRenderer extends Kimai_Invoice_HtmlRenderer
         $pdf->AddPage();
 
         $html = $this->getHtml();
-
+        
         // output the HTML content
         $pdf->writeHTML($html, true, false, true, false, '');
 
@@ -89,9 +86,48 @@ class Kimai_Invoice_HtmlToPdfRenderer extends Kimai_Invoice_HtmlRenderer
         $pdf->Output('invoice.pdf', 'I');
     }
 
+    private function output_pdf_from_wkhtmltopdf() 
+    {
+        require_once('phpwkhtmltopdf/WkHtmlToPdf.php');
+
+        $options = array(
+            'binPath' => 'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe',
+            'margin-top'    => 0,
+            'margin-right'  => 0,
+            'margin-bottom' => 0,
+            'margin-left'   => 0,
+            'page-size'     => 'A4'
+        );
+        $pdf = new WkHtmlToPdf($options);
+        $pdf->setPageOptions(array('disable-smart-shrinking'));
+
+
+        // Add a HTML file, a HTML string or a page from a URL
+        $pdf->addPage($this->getHtml());
+
+        if (!$pdf->send()) {
+            throw new Exception('Could not create PDF: '.$pdf->getError());
+        }
+    }
+
+    /**
+     * Render the invoice.
+     *
+     * @return mixed
+     */
+    public function render()
+    {
+        if ($this->use_tcpdf)
+        {
+            $this->output_pdf_from_tcpdf();
+        } else {
+            $this->output_pdf_from_wkhtmltopdf();
+        }
+    }
+
     protected function getTemplateFilename()
     {
         return 'index.html.pdf';
     }
-
+    
 }
